@@ -1,0 +1,133 @@
+import pygame
+import random
+
+# 初始化
+pygame.init()
+screen = pygame.display.set_mode((300, 600))
+pygame.display.set_caption("俄罗斯方块")
+
+# 颜色定义
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+COLORS = [
+    (0, 255, 255),  # I
+    (0, 0, 255),    # J
+    (255, 165, 0),  # L
+    (255, 255, 0),  # O
+    (0, 255, 0),    # S
+    (128, 0, 128),  # T
+    (255, 0, 0)     # Z
+]
+
+# 所有方块形状（包含Z形）
+SHAPES = [
+    [[1, 1, 1, 1]],                                # I
+    [[1, 0, 0], [1, 1, 1]],                        # J
+    [[0, 0, 1], [1, 1, 1]],                        # L
+    [[1, 1], [1, 1]],                              # O
+    [[0, 1, 1], [1, 1, 0]],                        # S
+    [[0, 1, 0], [1, 1, 1]],                        # T
+    [[1, 1, 0], [0, 1, 1]]                         # Z
+]
+
+# 正确的旋转函数（处理非方形矩阵）
+def rotate(shape):
+    return [list(row)[::-1] for row in zip(*shape)]
+
+class Tetromino:
+    def __init__(self):
+        self.shape_idx = random.randint(0, len(SHAPES)-1)
+        self.shape = SHAPES[self.shape_idx]
+        self.color = COLORS[self.shape_idx]
+        self.x = 4  # 居中显示
+        self.y = 0
+        
+    def rotate(self, grid):
+        """带边界检查的旋转"""
+        rotated = rotate(self.shape)
+        if not self.collision_check(self.x, self.y, rotated, grid):
+            self.shape = rotated
+    
+    def collision_check(self, x, y, shape, grid):
+        """检查是否碰撞边界或已有方块"""
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
+                if cell:
+                    if (y + i >= len(grid) or (x + j < 0 or x + j >= len(grid[0])) or \
+                       (y + i >= 0 and grid[y + i][x + j]):
+                        return True
+        return False
+
+# 游戏主逻辑
+def main():
+    clock = pygame.time.Clock()
+    grid = [[0 for _ in range(10)] for _ in range(20)]  # 20行10列的网格
+    current_piece = Tetromino()
+    fall_time = 0
+    fall_speed = 0.5  # 秒
+    
+    running = True
+    while running:
+        # 计算下落时间
+        delta_time = clock.tick(60) / 1000
+        fall_time += delta_time
+        
+        screen.fill(BLACK)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT and not current_piece.collision_check(
+                    current_piece.x - 1, current_piece.y, current_piece.shape, grid):
+                    current_piece.x -= 1
+                elif event.key == pygame.K_RIGHT and not current_piece.collision_check(
+                    current_piece.x + 1, current_piece.y, current_piece.shape, grid):
+                    current_piece.x += 1
+                elif event.key == pygame.K_DOWN:
+                    if not current_piece.collision_check(
+                        current_piece.x, current_piece.y + 1, current_piece.shape, grid):
+                        current_piece.y += 1
+                elif event.key == pygame.K_UP:
+                    current_piece.rotate(grid)
+        
+        # 自动下落
+        if fall_time >= fall_speed:
+            if not current_piece.collision_check(
+                current_piece.x, current_piece.y + 1, current_piece.shape, grid):
+                current_piece.y += 1
+            else:
+                # 固定当前方块到网格
+                for y, row in enumerate(current_piece.shape):
+                    for x, cell in enumerate(row):
+                        if cell and current_piece.y + y >= 0:
+                            grid[current_piece.y + y][current_piece.x + x] = current_piece.color
+                current_piece = Tetromino()
+                # 检查游戏结束
+                if current_piece.collision_check(
+                    current_piece.x, current_piece.y, current_piece.shape, grid):
+                    running = False
+            fall_time = 0
+        
+        # 绘制网格
+        for y in range(20):
+            for x in range(10):
+                if grid[y][x]:
+                    pygame.draw.rect(screen, grid[y][x], 
+                                   (x * 30, y * 30, 28, 28))
+        
+        # 绘制当前方块
+        for y, row in enumerate(current_piece.shape):
+            for x, cell in enumerate(row):
+                if cell:
+                    pygame.draw.rect(screen, current_piece.color, 
+                                   (current_piece.x * 30 + x * 30, 
+                                    current_piece.y * 30 + y * 30, 
+                                    28, 28))
+        
+        pygame.display.update()
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
