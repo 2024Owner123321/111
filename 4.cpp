@@ -4,7 +4,7 @@
 #include <windows.h>
 
 #define WIDTH 10
-#define HEIGHT 20
+#define HEIGHT 20 //l
 
 int board[HEIGHT][WIDTH] = { 0 };
 
